@@ -48,6 +48,8 @@ export default async function ProjectBoardPage({
             labels: task.labels.map((entry) => entry.label),
             subtaskCount: task._count.subtasks,
             commentCount: task._count.comments,
+            estimateMinutes: task.estimateMinutes,
+            spentMinutes: task.spentMinutes,
           })),
         }))}
       />
@@ -70,7 +72,15 @@ export default async function ProjectBoardPage({
             statusId: openTask.statusId,
             dueDate: openTask.dueDate?.toISOString() ?? null,
             startDate: openTask.startDate?.toISOString() ?? null,
-            estimateHours: openTask.estimateHours,
+            estimateMinutes: openTask.estimateMinutes,
+            spentMinutes: openTask.spentMinutes,
+            timeEntries: openTask.timeEntries.map((entry) => ({
+              id: entry.id,
+              minutes: entry.minutes,
+              note: entry.note,
+              spentOn: entry.spentOn.toISOString(),
+              user: entry.user,
+            })),
             completedAt: openTask.completedAt?.toISOString() ?? null,
             createdAt: openTask.createdAt.toISOString(),
             comments: openTask.comments.map((comment) => ({

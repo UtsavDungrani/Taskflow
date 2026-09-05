@@ -8,6 +8,8 @@ import {
   addComment,
   archiveTask,
   createTask,
+  deleteTimeEntry,
+  logTime,
   moveTask,
   setTaskStatus,
   updateTask,
@@ -80,7 +82,8 @@ const updateTaskSchema = z.object({
   priority: priority.optional(),
   dueDate: optionalDate,
   startDate: optionalDate,
-  estimateHours: z.coerce.number().min(0).max(10000).nullable().optional(),
+  // Already parsed to whole minutes by the client; see lib/duration.ts.
+  estimateMinutes: z.coerce.number().int().min(0).max(60000).nullable().optional(),
 });
 
 export async function updateTaskAction(input: unknown) {
@@ -125,6 +128,47 @@ export async function setTaskStatusAction(input: unknown) {
 
   revalidatePath(`/projects/${parsed.projectId}`);
   revalidatePath("/");
+  return { ok: true };
+}
+
+const logTimeSchema = z.object({
+  taskId: z.string().min(1),
+  projectId: z.string().min(1),
+  // Minutes, not hours: a day of work is 480, and 24h is the sane ceiling
+  // for a single entry.
+  minutes: z.coerce.number().int().min(1).max(1440),
+  note: z.string().trim().max(500).optional(),
+  spentOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD"),
+});
+
+export async function logTimeAction(input: unknown) {
+  const user = await requireUser();
+  const parsed = logTimeSchema.parse(input);
+
+  await logTime({
+    taskId: parsed.taskId,
+    userId: user.id,
+    minutes: parsed.minutes,
+    note: parsed.note,
+    // Midday UTC so the DATE column lands on the intended day regardless of
+    // which side of the date line the server sits.
+    spentOn: new Date(`${parsed.spentOn}T12:00:00Z`),
+  });
+
+  revalidatePath(`/projects/${parsed.projectId}`);
+  return { ok: true };
+}
+
+export async function deleteTimeEntryAction(
+  entryId: string,
+  projectId: string,
+) {
+  const user = await requireUser();
+  await deleteTimeEntry(entryId, user.id);
+
+  revalidatePath(`/projects/${projectId}`);
   return { ok: true };
 }
 

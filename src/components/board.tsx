@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { MessageSquare, Network, Plus } from "lucide-react";
+import { Clock, MessageSquare, Network, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -25,6 +25,7 @@ import { NewTaskDialog } from "@/components/new-task-dialog";
 import { Avatar, DueDateChip, PriorityBadge } from "@/components/ui";
 import { moveTaskAction } from "@/app/actions";
 import type { Priority, StatusCategory } from "@/generated/prisma/enums";
+import { formatDurationShort } from "@/lib/duration";
 import { cn, taskRef } from "@/lib/utils";
 
 export type BoardTask = {
@@ -38,6 +39,8 @@ export type BoardTask = {
   labels: { id: string; name: string; color: string }[];
   subtaskCount: number;
   commentCount: number;
+  estimateMinutes: number | null;
+  spentMinutes: number;
 };
 
 export type BoardColumn = {
@@ -408,8 +411,32 @@ function TaskCard({
 
       {(task.subtaskCount > 0 ||
         task.commentCount > 0 ||
+        task.spentMinutes > 0 ||
+        task.estimateMinutes ||
         task.assignee) && (
         <div className="text-ink-subtle mt-2 flex items-center gap-3 text-[11px]">
+          {(task.spentMinutes > 0 || task.estimateMinutes) && (
+            <span
+              className={cn(
+                "flex items-center gap-1",
+                // Only shout once there is an estimate to have blown past.
+                task.estimateMinutes &&
+                  task.spentMinutes > task.estimateMinutes &&
+                  "text-danger font-medium",
+              )}
+              title={
+                task.estimateMinutes
+                  ? `${formatDurationShort(task.spentMinutes)} logged of ${formatDurationShort(task.estimateMinutes)} estimated`
+                  : `${formatDurationShort(task.spentMinutes)} logged`
+              }
+            >
+              <Clock className="h-3 w-3" />
+              {formatDurationShort(task.spentMinutes)}
+              {task.estimateMinutes
+                ? ` / ${formatDurationShort(task.estimateMinutes)}`
+                : ""}
+            </span>
+          )}
           {task.subtaskCount > 0 && (
             <span className="flex items-center gap-1">
               <Network className="h-3 w-3" />

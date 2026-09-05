@@ -39,8 +39,9 @@ model User {
   members    WorkspaceMember[]
   created    Task[]            @relation("TaskCreator")
   assigned   Task[]            @relation("TaskAssignee")
-  comments   Comment[]
-  activities Activity[]
+  comments    Comment[]
+  activities  Activity[]
+  timeEntries TimeEntry[]
 }
 
 model Account {
@@ -205,10 +206,17 @@ model Task {
 
   // startDate + dueDate are what the Gantt and timeline views render.
   // dueDate alone is what the "you are about to miss this" view reads.
-  startDate     DateTime?
-  dueDate       DateTime?
-  completedAt   DateTime?
-  estimateHours Float?
+  startDate   DateTime?
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  // Time is kept in whole minutes rather than fractional hours: summing
+  // floats for durations drifts, and "1h 30m" is exactly 90.
+  estimateMinutes Int?
+  // Denormalised sum of this task's TimeEntry rows, maintained in the same
+  // transaction as the entries. Without it, showing spent time on a board of
+  // 50 cards would mean 50 aggregate queries.
+  spentMinutes    Int  @default(0)
 
   // Subtasks: a task may nest under a parent in the same project.
   parentId String?
@@ -227,10 +235,11 @@ model Task {
   assignee User?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   parent   Task?      @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
 
-  subtasks   Task[]            @relation("Subtasks")
-  labels     TaskLabel[]
-  comments   Comment[]
-  activities Activity[]
+  subtasks    Task[]      @relation("Subtasks")
+  labels      TaskLabel[]
+  comments    Comment[]
+  activities  Activity[]
+  timeEntries TimeEntry[]
   // Gantt edges, both directions.
   blockedBy  TaskDependency[]  @relation("DependencyBlocked")
   blocks     TaskDependency[]  @relation("DependencyBlocker")
@@ -254,6 +263,32 @@ model TaskDependency {
 
   @@unique([blockerId, blockedId])
   @@index([blockedId])
+}
+
+// ---------------------------------------------------------------------------
+// Time tracking
+// ---------------------------------------------------------------------------
+
+// One logged stretch of work. Kept as rows rather than a single total on the
+// task so the history survives: which day the work happened, who did it, and
+// what it was. That is what makes "hours logged this week" possible later
+// without a backfill.
+model TimeEntry {
+  id      String  @id @default(cuid())
+  taskId  String
+  userId  String?
+  minutes Int
+  note    String?
+  // Day granularity, stored as a DATE so it cannot drift across timezones.
+  spentOn DateTime @db.Date
+
+  createdAt DateTime @default(now())
+
+  task Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, spentOn])
+  @@index([userId, spentOn])
 }
 
 // ---------------------------------------------------------------------------

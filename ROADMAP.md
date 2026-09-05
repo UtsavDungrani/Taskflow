@@ -25,6 +25,18 @@ The schema already carries `startDate`, `dueDate`, `estimateHours` and a
       status, priority, start and due dates, description; leave comments; read
       the history. The open ticket lives in the URL (`?task=<id>`) rather than
       component state, so it is linkable and the back button closes it.
+- [x] **Time tracking** — an estimate per ticket and logged time against it,
+      with a progress bar that turns red past the estimate and a `2h / 5h`
+      badge on the card.
+
+      Logged time is rows (`TimeEntry`), not a single total, so the history
+      survives: which day, who, and what. `Task.spentMinutes` is a
+      denormalised sum maintained in the same transaction as the entries —
+      without it, a board of 50 cards would mean 50 aggregate queries.
+
+      Durations are whole minutes rather than fractional hours, because
+      summing floats for time drifts. Input accepts `2h`, `90m`, `1h 30m`,
+      `1:30` or a bare `1.5`.
 - [ ] **Assignee picker** — the field exists on `Task` and the avatar already
       renders on cards, but nothing sets it while the app is single-user.
 - [x] **Gantt chart** — bars from `startDate` to `dueDate`, day/week/month

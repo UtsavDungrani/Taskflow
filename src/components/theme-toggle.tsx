@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 
 type Theme = "light" | "dark" | "system";
 
-const STORAGE_KEY = "taskflow-theme";
+const COOKIE = "taskflow-theme";
+const ONE_YEAR = 60 * 60 * 24 * 365;
 
 /*
- * The <html data-theme> attribute is the source of truth, set before paint by
- * the inline script in the root layout. Reading it through
- * useSyncExternalStore rather than mirroring it into component state means
- * there is nothing to keep in sync, no setState in an effect, and no window
- * where the button disagrees with the page.
+ * The <html data-theme> attribute is the source of truth. The server sets it
+ * from a cookie, so it is already correct in the first byte of HTML; this
+ * control reads it rather than keeping a copy, which means there is no window
+ * where the button and the page disagree.
  */
 let listeners: (() => void)[] = [];
 
@@ -30,7 +30,7 @@ function getSnapshot(): Theme {
   return value === "light" || value === "dark" ? value : "system";
 }
 
-/** The server cannot know the preference, so it renders the neutral option. */
+/** Server render cannot read the DOM; the real value arrives on hydration. */
 function getServerSnapshot(): Theme {
   return "system";
 }
@@ -38,17 +38,14 @@ function getServerSnapshot(): Theme {
 function applyTheme(next: Theme) {
   const root = document.documentElement;
 
-  // setAttribute rather than assigning to dataset: the same effect, but it
-  // reads as a method call rather than mutating a value React is tracking.
-  if (next === "system") root.removeAttribute("data-theme");
-  else root.setAttribute("data-theme", next);
-
-  try {
-    if (next === "system") localStorage.removeItem(STORAGE_KEY);
-    else localStorage.setItem(STORAGE_KEY, next);
-  } catch {
-    // Private browsing or blocked storage: the choice still applies for
-    // this session, it just will not be remembered.
+  // Applied immediately so the change is instant, and written to the cookie
+  // so the next server render agrees without a client round trip.
+  if (next === "system") {
+    root.removeAttribute("data-theme");
+    document.cookie = `${COOKIE}=; path=/; max-age=0; samesite=lax`;
+  } else {
+    root.setAttribute("data-theme", next);
+    document.cookie = `${COOKIE}=${next}; path=/; max-age=${ONE_YEAR}; samesite=lax`;
   }
 
   for (const listener of listeners) listener();

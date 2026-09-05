@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,32 +25,29 @@ export const metadata: Metadata = {
   description: "Projects, tickets and deadlines that refuse to be forgotten.",
 };
 
-/*
- * Applies the saved theme before first paint. Without this the page renders
- * in the system theme and then snaps to the chosen one, which is a visible
- * flash on every navigation.
- */
-const themeScript = `
-try {
-  var t = localStorage.getItem("taskflow-theme");
-  if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
-} catch (e) {}
-`;
+export const THEME_COOKIE = "taskflow-theme";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  /*
+   * The theme lives in a cookie so the server can stamp data-theme onto the
+   * HTML it sends. That removes the usual blocking inline script -- there is
+   * no flash to prevent, because the very first byte already carries the
+   * right theme. Absent cookie means "follow the system", which the CSS
+   * handles via prefers-color-scheme.
+   */
+  const stored = (await cookies()).get(THEME_COOKIE)?.value;
+  const theme = stored === "light" || stored === "dark" ? stored : undefined;
+
   return (
     <html
       lang="en"
-      suppressHydrationWarning
+      data-theme={theme}
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body className="bg-canvas text-ink flex h-full flex-col">{children}</body>
     </html>
   );

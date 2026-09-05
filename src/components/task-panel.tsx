@@ -1,7 +1,7 @@
 "use client";
 
 import { format, formatDistanceToNow } from "date-fns";
-import { Archive, Check, X } from "lucide-react";
+import { Archive, Check, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
@@ -10,11 +10,14 @@ import { inputClass } from "@/components/modal";
 import {
   addCommentAction,
   archiveTaskAction,
+  deleteTimeEntryAction,
+  logTimeAction,
   setTaskStatusAction,
   updateTaskAction,
 } from "@/app/actions";
+import { formatDuration, parseDuration } from "@/lib/duration";
 import type { Priority } from "@/generated/prisma/enums";
-import { taskRef } from "@/lib/utils";
+import { cn, taskRef } from "@/lib/utils";
 
 type Person = { id: string; name: string | null; image: string | null } | null;
 
@@ -27,7 +30,15 @@ export type PanelTask = {
   statusId: string;
   dueDate: string | null;
   startDate: string | null;
-  estimateHours: number | null;
+  estimateMinutes: number | null;
+  spentMinutes: number;
+  timeEntries: {
+    id: string;
+    minutes: number;
+    note: string | null;
+    spentOn: string;
+    user: Person;
+  }[];
   completedAt: string | null;
   createdAt: string;
   comments: {
@@ -79,7 +90,17 @@ export function TaskPanel({
 
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
+  // See the note on `dirty` in TimeSection: blur alone is not evidence of an
+  // edit, so these fields only write when the user actually typed in them.
+  const [titleDirty, setTitleDirty] = useState(false);
+  const [descriptionDirty, setDescriptionDirty] = useState(false);
   const [comment, setComment] = useState("");
+  const [estimate, setEstimate] = useState(
+    task.estimateMinutes ? formatDuration(task.estimateMinutes) : "",
+  );
+  const [logAmount, setLogAmount] = useState("");
+  const [logNote, setLogNote] = useState("");
+  const [logDate, setLogDate] = useState(() => toDateInput(new Date().toISOString()));
 
   // Re-seed the draft fields when a different ticket is opened in the panel.
   const [seededFrom, setSeededFrom] = useState(task.id);
@@ -88,6 +109,11 @@ export function TaskPanel({
     setTitle(task.title);
     setDescription(task.description ?? "");
     setComment("");
+    setEstimate(task.estimateMinutes ? formatDuration(task.estimateMinutes) : "");
+    setLogAmount("");
+    setLogNote("");
+    setTitleDirty(false);
+    setDescriptionDirty(false);
   }
 
   function close() {
@@ -193,14 +219,20 @@ export function TaskPanel({
 
           <textarea
             value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(event) => {
+              setTitleDirty(true);
+              setTitle(event.target.value);
+            }}
             onBlur={() => {
+              if (!titleDirty) return;
               const next = title.trim();
               if (!next) {
                 setTitle(task.title);
+                setTitleDirty(false);
                 return;
               }
               if (next !== task.title) saveField({ title: next });
+              setTitleDirty(false);
             }}
             rows={2}
             className="text-ink w-full resize-none rounded-lg bg-transparent px-2 py-1 text-lg leading-snug font-semibold outline-none focus:bg-[var(--surface-sunken)]"
@@ -281,17 +313,53 @@ export function TaskPanel({
           <Labelled label="Description">
             <textarea
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) => {
+                setDescriptionDirty(true);
+                setDescription(event.target.value);
+              }}
               onBlur={() => {
+                if (!descriptionDirty) return;
                 if (description !== (task.description ?? "")) {
                   saveField({ description: description || null });
                 }
+                setDescriptionDirty(false);
               }}
               rows={5}
               placeholder="Add more detail…"
               className={inputClass}
             />
           </Labelled>
+
+          <TimeSection
+            task={task}
+            projectId={projectId}
+            pending={pending}
+            estimate={estimate}
+            setEstimate={setEstimate}
+            logAmount={logAmount}
+            setLogAmount={setLogAmount}
+            logNote={logNote}
+            setLogNote={setLogNote}
+            logDate={logDate}
+            setLogDate={setLogDate}
+            onSaveEstimate={(minutes) => saveField({ estimateMinutes: minutes })}
+            onLog={(minutes) =>
+              run(async () => {
+                await logTimeAction({
+                  taskId: task.id,
+                  projectId,
+                  minutes,
+                  note: logNote.trim() || undefined,
+                  spentOn: logDate,
+                });
+                setLogAmount("");
+                setLogNote("");
+              })
+            }
+            onDeleteEntry={(entryId) =>
+              run(() => deleteTimeEntryAction(entryId, projectId))
+            }
+          />
 
           <section>
             <h3 className="text-ink mb-2 text-sm font-semibold">
@@ -391,12 +459,239 @@ export function TaskPanel({
   );
 }
 
+function TimeSection({
+  task,
+  pending,
+  estimate,
+  setEstimate,
+  logAmount,
+  setLogAmount,
+  logNote,
+  setLogNote,
+  logDate,
+  setLogDate,
+  onSaveEstimate,
+  onLog,
+  onDeleteEntry,
+}: {
+  task: PanelTask;
+  projectId: string;
+  pending: boolean;
+  estimate: string;
+  setEstimate: (value: string) => void;
+  logAmount: string;
+  setLogAmount: (value: string) => void;
+  logNote: string;
+  setLogNote: (value: string) => void;
+  logDate: string;
+  setLogDate: (value: string) => void;
+  onSaveEstimate: (minutes: number | null) => void;
+  onLog: (minutes: number) => void;
+  onDeleteEntry: (entryId: string) => void;
+}) {
+  const [amountError, setAmountError] = useState<string | null>(null);
+
+  /*
+   * Save-on-blur has a sharp edge: a blur fires whether or not the user
+   * touched the field, so an input that happens to be empty at that moment
+   * will happily persist "cleared". That silently destroyed an estimate
+   * during testing. Only write when the field has actually been edited, and
+   * forget the edit once the server value catches up.
+   */
+  const [dirty, setDirty] = useState(false);
+  const [syncedEstimate, setSyncedEstimate] = useState(task.estimateMinutes);
+  if (syncedEstimate !== task.estimateMinutes) {
+    setSyncedEstimate(task.estimateMinutes);
+    setDirty(false);
+  }
+
+  const spent = task.spentMinutes;
+  const estimated = task.estimateMinutes ?? 0;
+  const over = estimated > 0 && spent > estimated;
+  const percent =
+    estimated > 0 ? Math.min((spent / estimated) * 100, 100) : 0;
+
+  const parsedLog = parseDuration(logAmount);
+
+  return (
+    <section>
+      <div className="mb-2 flex items-baseline justify-between">
+        <h3 className="text-ink text-sm font-semibold">Time</h3>
+        <span className="text-ink-subtle text-xs tabular-nums">
+          {formatDuration(spent)} logged
+          {estimated > 0 && ` of ${formatDuration(estimated)}`}
+        </span>
+      </div>
+
+      {estimated > 0 && (
+        <div className="mb-3">
+          <div className="bg-surface-sunken h-1.5 w-full overflow-hidden rounded-full">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all",
+                over ? "bg-danger" : "bg-success",
+              )}
+              style={{ width: `${Math.max(percent, spent > 0 ? 3 : 0)}%` }}
+            />
+          </div>
+          {over && (
+            <p className="text-danger mt-1 text-xs">
+              {formatDuration(spent - estimated)} over estimate
+            </p>
+          )}
+        </div>
+      )}
+
+      <div>
+        <label className="block">
+          <span className="text-ink-muted mb-1 block text-xs font-medium">
+            Estimate
+          </span>
+          <input
+            value={estimate}
+            onChange={(event) => {
+              setDirty(true);
+              setEstimate(event.target.value);
+            }}
+            onBlur={() => {
+              // Untouched field: nothing to save, and crucially nothing to
+              // clear. See the note on `dirty` above.
+              if (!dirty) return;
+
+              const text = estimate.trim();
+              if (text === "") {
+                if (task.estimateMinutes !== null) onSaveEstimate(null);
+                setDirty(false);
+                return;
+              }
+              const minutes = parseDuration(text);
+              if (minutes === null) {
+                // Unparseable: put the stored value back rather than guess.
+                setEstimate(
+                  task.estimateMinutes
+                    ? formatDuration(task.estimateMinutes)
+                    : "",
+                );
+                setDirty(false);
+                return;
+              }
+              if (minutes !== task.estimateMinutes) onSaveEstimate(minutes);
+              setEstimate(formatDuration(minutes));
+            }}
+            placeholder="e.g. 4h, 90m, 1h 30m"
+            className={inputClass}
+          />
+        </label>
+      </div>
+
+      <form
+        className="mt-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const minutes = parseDuration(logAmount);
+          if (minutes === null) {
+            setAmountError("Try 2h, 45m, 1h 30m or 1:30.");
+            return;
+          }
+          setAmountError(null);
+          onLog(minutes);
+        }}
+      >
+        <span className="text-ink-muted mb-1 block text-xs font-medium">
+          Log time
+        </span>
+        {/*
+          Two rows rather than one. A native date input will not shrink below
+          its own content width, so putting amount, date, note and the button
+          on a single line forced the modal to scroll sideways. Each track
+          here is either fixed or free to shrink to zero (minmax(0,1fr)).
+        */}
+        <div className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)_auto] gap-2">
+          <input
+            value={logAmount}
+            onChange={(event) => {
+              setLogAmount(event.target.value);
+              if (amountError) setAmountError(null);
+            }}
+            placeholder="2h"
+            aria-label="Amount of time"
+            className={inputClass}
+          />
+          <input
+            type="date"
+            value={logDate}
+            onChange={(event) => setLogDate(event.target.value)}
+            aria-label="Day the work happened"
+            className={`${inputClass} min-w-0`}
+          />
+          <button
+            type="submit"
+            disabled={pending || !logAmount.trim()}
+            className="bg-accent text-accent-ink shrink-0 rounded-lg px-4 py-2 text-xs font-medium transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Log
+          </button>
+        </div>
+        <input
+          value={logNote}
+          onChange={(event) => setLogNote(event.target.value)}
+          placeholder="What did you do? (optional)"
+          aria-label="Note"
+          className={`${inputClass} mt-2`}
+        />
+        {amountError ? (
+          <p className="text-danger mt-1 text-xs">{amountError}</p>
+        ) : (
+          parsedLog !== null && (
+            <p className="text-ink-subtle mt-1 text-xs">
+              Will log {formatDuration(parsedLog)}
+            </p>
+          )
+        )}
+      </form>
+
+      {task.timeEntries.length > 0 && (
+        <ul className="divide-border border-border mt-3 divide-y rounded-lg border">
+          {task.timeEntries.map((entry) => (
+            <li
+              key={entry.id}
+              className="flex items-baseline gap-2 px-3 py-1.5 text-xs"
+            >
+              <span className="text-ink w-16 shrink-0 font-medium tabular-nums">
+                {formatDuration(entry.minutes)}
+              </span>
+              <span className="text-ink-subtle w-20 shrink-0">
+                {format(new Date(entry.spentOn), "d MMM")}
+              </span>
+              <span className="text-ink-muted min-w-0 flex-1 truncate">
+                {entry.note ?? ""}
+              </span>
+              <button
+                type="button"
+                onClick={() => onDeleteEntry(entry.id)}
+                disabled={pending}
+                className="text-ink-subtle hover:text-danger shrink-0 transition disabled:opacity-40"
+                aria-label={`Delete ${formatDuration(entry.minutes)} entry`}
+                title="Delete entry"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function describeActivity(type: string, data: Record<string, unknown> | null) {
   switch (type) {
     case "task.created":
       return "created this task";
     case "status.changed":
       return `moved from ${String(data?.from)} to ${String(data?.to)}`;
+    case "time.logged":
+      return `logged ${formatDuration(Number(data?.minutes ?? 0))}`;
     case "due_date.changed": {
       const to = data?.to ? format(new Date(String(data.to)), "PP") : "none";
       const from = data?.from

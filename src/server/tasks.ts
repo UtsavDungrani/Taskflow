@@ -150,6 +150,10 @@ export async function getTask(taskId: string, userId: string) {
         take: 50,
         include: { actor: { select: { id: true, name: true, image: true } } },
       },
+      timeEntries: {
+        orderBy: [{ spentOn: "desc" }, { createdAt: "desc" }],
+        include: { user: { select: { id: true, name: true, image: true } } },
+      },
     },
   });
 }
@@ -304,7 +308,7 @@ export async function updateTask(input: {
     priority?: Priority;
     dueDate?: Date | null;
     startDate?: Date | null;
-    estimateHours?: number | null;
+    estimateMinutes?: number | null;
     assigneeId?: string | null;
   };
 }) {
@@ -376,6 +380,70 @@ export async function setTaskStatus(input: {
     statusId: input.statusId,
     beforeId: last?.id ?? null,
     afterId: null,
+  });
+}
+
+/**
+ * Logs a stretch of work and keeps the denormalised total on the task in
+ * step. Both writes share a transaction so the total can never disagree with
+ * the entries that produced it.
+ */
+export async function logTime(input: {
+  taskId: string;
+  userId: string;
+  minutes: number;
+  note?: string | null;
+  spentOn: Date;
+}) {
+  await assertTaskAccess(input.taskId, input.userId);
+
+  return prisma.$transaction(async (tx) => {
+    const entry = await tx.timeEntry.create({
+      data: {
+        taskId: input.taskId,
+        userId: input.userId,
+        minutes: input.minutes,
+        note: input.note ?? null,
+        spentOn: input.spentOn,
+      },
+    });
+
+    await tx.task.update({
+      where: { id: input.taskId },
+      data: { spentMinutes: { increment: input.minutes } },
+    });
+
+    await tx.activity.create({
+      data: {
+        taskId: input.taskId,
+        actorId: input.userId,
+        type: "time.logged",
+        data: { minutes: input.minutes },
+      },
+    });
+
+    return entry;
+  });
+}
+
+export async function deleteTimeEntry(entryId: string, userId: string) {
+  // Scope the lookup through the task, so an id from another workspace is
+  // simply not found rather than deletable.
+  const entry = await prisma.timeEntry.findFirst({
+    where: {
+      id: entryId,
+      task: { project: { workspace: { members: { some: { userId } } } } },
+    },
+  });
+  if (!entry) throw new Error("NOT_FOUND");
+
+  return prisma.$transaction(async (tx) => {
+    await tx.timeEntry.delete({ where: { id: entryId } });
+    await tx.task.update({
+      where: { id: entry.taskId },
+      data: { spentMinutes: { decrement: entry.minutes } },
+    });
+    return { taskId: entry.taskId };
   });
 }
 
