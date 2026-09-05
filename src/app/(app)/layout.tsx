@@ -23,7 +23,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-full flex-1">
+    <div className="flex h-full min-h-0 flex-1">
       <Sidebar
         workspaceName={workspace.name}
         projects={projects}
@@ -34,7 +34,7 @@ export default async function AppLayout({
         }}
         signOutAction={handleSignOut}
       />
-      <main className="min-w-0 flex-1">{children}</main>
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</main>
     </div>
   );
 }

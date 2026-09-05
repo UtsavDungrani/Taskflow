@@ -28,23 +28,7 @@ export default async function ProjectBoardPage({
   if (!project) notFound();
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="border-border flex items-center gap-3 border-b px-6 py-3">
-        <span
-          className="h-3 w-3 rounded-sm"
-          style={{ backgroundColor: project.color }}
-        />
-        <h1 className="text-ink text-base font-semibold tracking-tight">
-          {project.name}
-        </h1>
-        <span className="text-ink-subtle font-mono text-xs">{project.key}</span>
-        {project.description && (
-          <p className="text-ink-muted ml-2 truncate text-sm">
-            {project.description}
-          </p>
-        )}
-      </header>
-
+    <>
       <Board
         projectId={project.id}
         projectKey={project.key}
@@ -105,6 +89,6 @@ export default async function ProjectBoardPage({
           }}
         />
       )}
-    </div>
+    </>
   );
 }

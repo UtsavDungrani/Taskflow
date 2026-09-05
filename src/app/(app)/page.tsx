@@ -29,7 +29,7 @@ export default async function DeadlinesPage() {
     digest.later.length;
 
   return (
-    <div className="mx-auto max-w-3xl px-8 py-8">
+    <div className="scroll-slim mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-8 py-8">
       <header className="mb-8">
         <h1 className="text-ink text-2xl font-semibold tracking-tight">
           Deadlines

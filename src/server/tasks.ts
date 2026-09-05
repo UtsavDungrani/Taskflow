@@ -97,23 +97,35 @@ export async function getDeadlineDigest(userId: string) {
   };
 }
 
-/** Everything with a date range, for the Gantt and timeline views. */
-export async function getScheduledTasks(projectId: string, userId: string) {
-  await assertProjectAccess(projectId, userId);
+/**
+ * Everything with a date, for the Gantt and calendar views.
+ *
+ * Undated tasks are returned too, separately: a scheduling view that silently
+ * hides work is worse than one that admits the work exists but has no date
+ * yet. The Gantt lists them in a tray you can drag onto the timeline.
+ */
+export async function getSchedule(projectId: string, userId: string) {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, workspace: { members: { some: { userId } } } },
+    select: { id: true, name: true, key: true, color: true },
+  });
+  if (!project) return null;
 
-  return prisma.task.findMany({
-    where: {
-      projectId,
-      archivedAt: null,
-      OR: [{ startDate: { not: null } }, { dueDate: { not: null } }],
-    },
-    orderBy: [{ startDate: "asc" }, { dueDate: "asc" }],
+  const tasks = await prisma.task.findMany({
+    where: { projectId, archivedAt: null },
+    orderBy: [{ startDate: "asc" }, { dueDate: "asc" }, { number: "asc" }],
     include: {
       status: true,
       assignee: { select: { id: true, name: true, image: true } },
       blockedBy: { select: { blockerId: true } },
     },
   });
+
+  return {
+    project,
+    scheduled: tasks.filter((task) => task.startDate || task.dueDate),
+    unscheduled: tasks.filter((task) => !task.startDate && !task.dueDate),
+  };
 }
 
 export async function getTask(taskId: string, userId: string) {

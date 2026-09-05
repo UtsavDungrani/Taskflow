@@ -27,12 +27,23 @@ The schema already carries `startDate`, `dueDate`, `estimateHours` and a
       component state, so it is linkable and the back button closes it.
 - [ ] **Assignee picker** — the field exists on `Task` and the avatar already
       renders on cards, but nothing sets it while the app is single-user.
-- [ ] **Gantt chart** — bars from `startDate` to `dueDate`, dependency arrows
-      from `TaskDependency`. Rolling this by hand (CSS grid + absolute
-      positioning) rather than pulling a library: the good React Gantt
-      libraries are paid, and the free ones look it.
-- [ ] **Timeline / calendar view** — the same rows, laid out by week.
-- [ ] **Drag to reschedule** — dragging a Gantt bar writes the dates back.
+- [x] **Gantt chart** — bars from `startDate` to `dueDate`, day/week/month
+      zoom, a today marker, weekend shading, and dependency arrows drawn from
+      `TaskDependency`. Built by hand rather than with a library: the good
+      React Gantt packages are paid and the free ones look it.
+
+      A task with only a due date renders as a **milestone diamond**, not a
+      zero-width bar — which matters, because in practice almost every task
+      starts life with a due date and no start date. Dragging a milestone's
+      left handle sets a start date and turns it into a bar, which is the
+      fastest way to actually schedule work.
+
+      Tasks with no dates at all are listed in a tray beneath the chart
+      rather than silently hidden.
+- [x] **Calendar view** — a month grid; tasks with a start and due date span
+      every day they cover, so "how busy is next week" is legible at a glance.
+- [x] **Drag to reschedule** — dragging a bar moves both dates, dragging an
+      edge moves one. Optimistic, with rollback if the write fails.
 - [ ] **List view** with sorting and filtering by assignee, label, priority.
 
 ## Phase 3 — Making it hard to forget
