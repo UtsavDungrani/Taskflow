@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { NewProjectDialog } from "@/components/new-project-dialog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +39,9 @@ export function Sidebar({
             TF
           </div>
           <div className="min-w-0">
-            <p className="text-ink truncate text-sm font-semibold">TaskFlow</p>
+            <p className="font-display text-ink truncate text-base font-semibold">
+              TaskFlow
+            </p>
             <p className="text-ink-subtle truncate text-xs">{workspaceName}</p>
           </div>
         </div>
@@ -89,7 +92,8 @@ export function Sidebar({
           )}
         </nav>
 
-        <div className="border-border border-t p-2">
+        <div className="border-border space-y-2 border-t p-2">
+          <ThemeToggle />
           <div className="flex items-center gap-2 px-2 py-1.5">
             <Avatar name={user.name} image={user.image} size={26} />
             <div className="min-w-0 flex-1">

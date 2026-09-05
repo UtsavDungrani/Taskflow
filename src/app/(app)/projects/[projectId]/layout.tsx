@@ -31,7 +31,7 @@ export default async function ProjectLayout({
             className="h-3 w-3 rounded-sm"
             style={{ backgroundColor: project.color }}
           />
-          <h1 className="text-ink text-base font-semibold tracking-tight">
+          <h1 className="font-display text-ink text-lg font-semibold">
             {project.name}
           </h1>
           <span className="text-ink-subtle font-mono text-xs">

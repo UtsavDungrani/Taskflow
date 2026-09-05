@@ -1,63 +1,106 @@
 @import "tailwindcss";
 
 /*
- * Semantic tokens, not raw colours. Components reference `bg-surface` /
- * `text-ink-muted` so the whole app re-themes from this one block.
+ * Warm paper.
+ *
+ * Components reference semantic tokens (bg-surface, text-ink-muted) rather
+ * than raw colours, so the whole app re-themes from this block alone.
+ *
+ * The palette is deliberately warm and light-first. This app's job is to
+ * show you what you are late on; a paper surface makes that read like a
+ * notebook you keep rather than a report filed against you. Keeping the
+ * accent in the orange family and danger in the red family also gives the
+ * deadline views a real temperature scale -- calm cream, then amber, then
+ * terracotta, then deep red -- instead of one lonely red among blues.
  */
 :root {
-  --canvas: #f6f7f9;
-  --surface: #ffffff;
+  --canvas: #f5f1e8;
+  --surface: #fffdf7;
   --surface-raised: #ffffff;
-  --surface-sunken: #eef0f4;
-  --border: #e2e5ea;
-  --border-strong: #cbd1da;
+  --surface-sunken: #ebe4d6;
+  --border: #e2d9c7;
+  --border-strong: #c9bca4;
 
-  --ink: #10131a;
-  --ink-muted: #5a6472;
-  --ink-subtle: #8b95a3;
+  --ink: #22201c;
+  --ink-muted: #6a6055;
+  --ink-subtle: #9a8f80;
 
-  --accent: #4f46e5;
+  --accent: #b4471f;
   --accent-ink: #ffffff;
-  --accent-soft: #eef2ff;
+  --accent-soft: #fbeae1;
 
-  --danger: #dc2626;
-  --danger-soft: #fef2f2;
-  --warning: #d97706;
-  --warning-soft: #fffbeb;
-  --success: #16a34a;
-  --success-soft: #f0fdf4;
+  /* Redder and darker than the accent, so "late" never reads as "clickable". */
+  --danger: #a32b2b;
+  --danger-soft: #fbe7e4;
+  --warning: #a8720c;
+  --warning-soft: #fcf2dc;
+  --success: #4f7a3a;
+  --success-soft: #edf3e6;
 
-  --shadow-card: 0 1px 2px rgb(16 19 26 / 0.06), 0 1px 3px rgb(16 19 26 / 0.04);
-  --shadow-pop: 0 8px 24px rgb(16 19 26 / 0.12);
+  --shadow-card: 0 1px 2px rgb(60 45 30 / 0.07), 0 1px 3px rgb(60 45 30 / 0.05);
+  --shadow-pop: 0 12px 32px rgb(45 33 22 / 0.16);
 }
 
+/*
+ * Warm dark: espresso, not charcoal. Desaturating to grey here would throw
+ * away the whole point of the palette, so the neutrals keep their brown cast
+ * and the accents lighten rather than shift hue.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #0b0d11;
-    --surface: #14171d;
-    --surface-raised: #1a1e26;
-    --surface-sunken: #0f1216;
-    --border: #262b34;
-    --border-strong: #363d49;
+  :root:not([data-theme="light"]) {
+    --canvas: #17130f;
+    --surface: #201a15;
+    --surface-raised: #2a231c;
+    --surface-sunken: #12100c;
+    --border: #372e24;
+    --border-strong: #4d4034;
 
-    --ink: #e9ecf1;
-    --ink-muted: #97a1b0;
-    --ink-subtle: #6b7585;
+    --ink: #efe7da;
+    --ink-muted: #a99a88;
+    --ink-subtle: #7a6c5c;
 
-    --accent: #6366f1;
-    --accent-ink: #ffffff;
-    --accent-soft: #1e1b4b;
+    --accent: #e0703f;
+    --accent-ink: #1a1410;
+    --accent-soft: #37231a;
 
-    --danger: #f87171;
-    --danger-soft: #2a1416;
-    --warning: #fbbf24;
-    --warning-soft: #2a1f0d;
-    --success: #4ade80;
-    --success-soft: #0f2418;
+    --danger: #e4685c;
+    --danger-soft: #331916;
+    --warning: #e0a62e;
+    --warning-soft: #33270e;
+    --success: #8cb45c;
+    --success-soft: #1e2a16;
 
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.5);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5);
+    --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.6);
   }
+}
+
+/* The explicit choice wins over the system preference, in both directions. */
+:root[data-theme="dark"] {
+  --canvas: #17130f;
+  --surface: #201a15;
+  --surface-raised: #2a231c;
+  --surface-sunken: #12100c;
+  --border: #372e24;
+  --border-strong: #4d4034;
+
+  --ink: #efe7da;
+  --ink-muted: #a99a88;
+  --ink-subtle: #7a6c5c;
+
+  --accent: #e0703f;
+  --accent-ink: #1a1410;
+  --accent-soft: #37231a;
+
+  --danger: #e4685c;
+  --danger-soft: #331916;
+  --warning: #e0a62e;
+  --warning-soft: #33270e;
+  --success: #8cb45c;
+  --success-soft: #1e2a16;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.6);
 }
 
 @theme inline {
@@ -85,10 +128,21 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 }
 
 body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Serif is reserved for page titles and the wordmark. At 12-14px a serif
+ * costs legibility for no gain, so the dense parts of the UI stay sans.
+ */
+.font-display {
+  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
 }
 
 /* Board columns scroll a lot; keep their scrollbars from shouting. */

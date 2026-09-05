@@ -10,11 +10,11 @@ import { POSITION_STEP } from "@/lib/utils";
  * rename freely.
  */
 export const DEFAULT_STATUSES = [
-  { name: "Backlog", category: StatusCategory.TODO, color: "#94a3b8" },
-  { name: "To Do", category: StatusCategory.TODO, color: "#38bdf8" },
-  { name: "In Progress", category: StatusCategory.IN_PROGRESS, color: "#f59e0b" },
-  { name: "In Review", category: StatusCategory.IN_PROGRESS, color: "#a855f7" },
-  { name: "Done", category: StatusCategory.DONE, color: "#22c55e" },
+  { name: "Backlog", category: StatusCategory.TODO, color: "#a1907c" },
+  { name: "To Do", category: StatusCategory.TODO, color: "#6e8b74" },
+  { name: "In Progress", category: StatusCategory.IN_PROGRESS, color: "#c88b2e" },
+  { name: "In Review", category: StatusCategory.IN_PROGRESS, color: "#a86b8c" },
+  { name: "Done", category: StatusCategory.DONE, color: "#5e8c4a" },
 ] as const;
 
 function slugify(input: string) {

@@ -17,7 +17,7 @@ export default async function LoginPage() {
           <div className="bg-accent text-accent-ink mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-lg font-bold">
             TF
           </div>
-          <h1 className="text-ink text-xl font-semibold tracking-tight">
+          <h1 className="font-display text-ink text-2xl font-semibold">
             TaskFlow
           </h1>
           <p className="text-ink-muted mt-1 text-sm">

@@ -32,11 +32,11 @@ function due(days: number) {
 }
 
 const STATUSES = [
-  { name: "Backlog", category: "TODO", color: "#94a3b8" },
-  { name: "To Do", category: "TODO", color: "#38bdf8" },
-  { name: "In Progress", category: "IN_PROGRESS", color: "#f59e0b" },
-  { name: "In Review", category: "IN_PROGRESS", color: "#a855f7" },
-  { name: "Done", category: "DONE", color: "#22c55e" },
+  { name: "Backlog", category: "TODO", color: "#a1907c" },
+  { name: "To Do", category: "TODO", color: "#6e8b74" },
+  { name: "In Progress", category: "IN_PROGRESS", color: "#c88b2e" },
+  { name: "In Review", category: "IN_PROGRESS", color: "#a86b8c" },
+  { name: "Done", category: "DONE", color: "#5e8c4a" },
 ] as const;
 
 const TASKS = [
@@ -89,7 +89,7 @@ async function main() {
       name: "Demo Project",
       key: "DEMO",
       description: "Sample data so the board and deadline views aren't empty.",
-      color: "#6366f1",
+      color: "#b4471f",
       statuses: {
         create: STATUSES.map((status, index) => ({
           name: status.name,

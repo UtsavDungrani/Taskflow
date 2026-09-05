@@ -6,15 +6,17 @@ import { useState, useTransition } from "react";
 import { Field, Modal, SubmitButton, inputClass } from "@/components/modal";
 import { createProjectAction } from "@/app/actions";
 
+// Earth tones rather than the usual saturated wheel: they sit on a cream
+// canvas without fighting it, and leave red free to mean "late".
 const COLORS = [
-  "#6366f1",
-  "#0ea5e9",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#ec4899",
-  "#8b5cf6",
-  "#64748b",
+  "#b4471f",
+  "#c88b2e",
+  "#5e8c4a",
+  "#3e7c7b",
+  "#a86b8c",
+  "#8c5a3c",
+  "#6e8b74",
+  "#8a8578",
 ];
 
 /** "Visual Whiteboard Pro" -> "VWP"; "udur" -> "UDU". */

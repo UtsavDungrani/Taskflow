@@ -130,7 +130,7 @@ model Project {
   // Short prefix used to build human ticket refs, e.g. "TF" -> TF-14.
   key         String
   description String?
-  color       String    @default("#6366f1")
+  color       String    @default("#b4471f")
   archivedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -164,7 +164,7 @@ model TaskStatus {
   projectId String
   name      String
   category  StatusCategory @default(TODO)
-  color     String         @default("#94a3b8")
+  color     String         @default("#a1907c")
   position  Float
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -264,7 +264,7 @@ model Label {
   id          String @id @default(cuid())
   workspaceId String
   name        String
-  color       String @default("#64748b")
+  color       String @default("#8a8578")
 
   workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tasks     TaskLabel[]

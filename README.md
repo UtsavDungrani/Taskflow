@@ -22,6 +22,7 @@ comes next and why the schema is already shaped for it.
 | Database | PostgreSQL via Prisma 7 (`@prisma/adapter-pg`) |
 | Auth     | Auth.js v5 — GitHub OAuth + a dev-only login   |
 | Styling  | Tailwind CSS v4, semantic tokens in `globals.css` |
+| Theme    | Warm paper, light-first, with a warm-dark counterpart |
 | Drag/drop| dnd-kit                                        |
 
 ## Getting started
@@ -181,6 +182,27 @@ If your database password contains `@`, `%`, `#` or `/`, percent-encode it
 (`@` becomes `%40`), or the URL parser will split the string in the wrong
 place. And delete the square brackets around `[YOUR-PASSWORD]` — they are a
 placeholder, not part of the format.
+
+## About the theme
+
+The palette is deliberately warm and light-first, and it is worth saying why,
+because the default for an app like this is charcoal with an indigo accent.
+
+This app's job is to show you what you are late on. A paper surface makes
+that read like a notebook you keep; charcoal and indigo makes it read like a
+report filed against you. Keeping the accent in the orange family and danger
+in the red family also gives the deadline views a genuine temperature scale
+— cream, then amber, then terracotta, then deep red — rather than one lonely
+red among blues.
+
+Dark mode is a warm dark: espresso browns, not grey. Desaturating the
+neutrals would throw away the point of the palette.
+
+Everything is driven by semantic tokens (`--accent`, `--surface`, `--ink`) in
+`globals.css`. Components never reference a raw colour, so the whole app
+re-themes from that one file. The `<html data-theme>` attribute overrides the
+system preference and is set before first paint by a small inline script in
+the root layout, so there is no flash.
 
 ## Known issues
 
