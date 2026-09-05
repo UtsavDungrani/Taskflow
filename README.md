@@ -96,6 +96,70 @@ once you have it working.
 | `npm run db:export`  | Dump every table to JSON                    |
 | `npm run db:restore` | Replay a dump into the current database     |
 
+## Deploying
+
+Vercel is the path of least resistance for a Next.js app, and the free tier
+is enough. The database stays where it is — Supabase is already reachable
+from anywhere.
+
+### 1. Import the repo
+
+At [vercel.com/new](https://vercel.com/new), import the GitHub repository.
+Framework and build command are detected; nothing needs overriding.
+
+### 2. Environment variables
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | The same Supabase **session pooler** string as local |
+| `AUTH_SECRET` | A **new** one: `npx auth secret`, or `openssl rand -base64 32` |
+| `AUTH_GITHUB_ID` | From the OAuth app below |
+| `AUTH_GITHUB_SECRET` | From the OAuth app below |
+
+Do **not** set `ALLOW_DEV_LOGIN`. The dev-login provider is gated on
+`NODE_ENV`, so it is off in production whatever that variable says — but
+setting it invites confusion later.
+
+Generate a separate `AUTH_SECRET` for production rather than reusing the
+local one: they sign session cookies, and sharing one means a token minted
+on a laptop is valid against the deployed app.
+
+### 3. GitHub OAuth app
+
+**Production has no other way in.** Dev login is disabled there by design,
+so without this you will deploy successfully and be unable to sign in.
+
+The callback needs the deployed URL, which you only know after the first
+deploy — so deploy once, note the URL, then create the app at
+<https://github.com/settings/developers>:
+
+- Homepage URL: `https://YOUR-APP.vercel.app`
+- Authorization callback URL:
+  `https://YOUR-APP.vercel.app/api/auth/callback/github`
+
+Add the two variables and redeploy.
+
+### 4. Claim your existing data
+
+Signing in with GitHub creates a **new** user, whose workspace is empty —
+the local projects belong to whatever `DEV_LOGIN_EMAIL` was. Point
+`DEV_LOGIN_EMAIL` at your GitHub email so both sign-in paths resolve to one
+user, and move the membership across:
+
+```sql
+update "WorkspaceMember" set "userId" = '<github-user-id>'
+where "userId" = '<old-dev-user-id>';
+```
+
+### Notes
+
+`prisma generate` runs as part of `build`, because the generated client is
+gitignored and a fresh checkout would otherwise have no Prisma client at all.
+
+Serverless functions each hold their own connection. The Supabase session
+pooler copes fine at personal-project traffic; if you ever see connection
+limits, that is the thing to revisit.
+
 ## Architecture notes
 
 **Everything hangs off a `Workspace`, even with one user.** That is the tenancy

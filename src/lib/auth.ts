@@ -61,6 +61,10 @@ if (devLoginEnabled) {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers,
+  // Behind a platform proxy (Vercel and friends) the request host is
+  // forwarded rather than direct, and Auth.js refuses to trust it unless
+  // told to. Without this, callbacks fail in production with a host mismatch.
+  trustHost: true,
   // JWT rather than database sessions: the Credentials provider cannot use
   // database sessions, and we want both providers on the same strategy.
   session: { strategy: "jwt" },
