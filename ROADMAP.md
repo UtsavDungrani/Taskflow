@@ -21,8 +21,12 @@ Built.
 The schema already carries `startDate`, `dueDate`, `estimateHours` and a
 `TaskDependency` edge table, so none of this needs a migration.
 
-- [ ] **Task detail panel** — open a card, edit fields, comment, see history.
-      The single biggest gap right now: tasks can be created but not edited.
+- [x] **Task detail panel** — click a card to open a slide-over: edit title,
+      status, priority, start and due dates, description; leave comments; read
+      the history. The open ticket lives in the URL (`?task=<id>`) rather than
+      component state, so it is linkable and the back button closes it.
+- [ ] **Assignee picker** — the field exists on `Task` and the avatar already
+      renders on cards, but nothing sets it while the app is single-user.
 - [ ] **Gantt chart** — bars from `startDate` to `dueDate`, dependency arrows
       from `TaskDependency`. Rolling this by hand (CSS grid + absolute
       positioning) rather than pulling a library: the good React Gantt

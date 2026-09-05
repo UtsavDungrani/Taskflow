@@ -19,7 +19,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { MessageSquare, Network, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { NewTaskDialog } from "@/components/new-task-dialog";
 import { Avatar, DueDateChip, PriorityBadge } from "@/components/ui";
@@ -206,6 +206,7 @@ export function Board({
             <Column
               key={column.id}
               column={column}
+              projectId={projectId}
               projectKey={projectKey}
               onCompose={() => setComposingIn(column.id)}
             />
@@ -240,10 +241,12 @@ export function Board({
 
 function Column({
   column,
+  projectId,
   projectKey,
   onCompose,
 }: {
   column: BoardColumn;
+  projectId: string;
   projectKey: string;
   onCompose: () => void;
 }) {
@@ -285,6 +288,7 @@ function Column({
             <SortableTaskCard
               key={task.id}
               task={task}
+              projectId={projectId}
               projectKey={projectKey}
               done={column.category === "DONE"}
             />
@@ -307,15 +311,24 @@ function Column({
 
 function SortableTaskCard({
   task,
+  projectId,
   projectKey,
   done,
 }: {
   task: BoardTask;
+  projectId: string;
   projectKey: string;
   done: boolean;
 }) {
+  const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
+
+  // The card is both a drag handle and a link. dnd-kit will not start a drag
+  // below its 4px activation distance, but the browser still fires a click
+  // after a real drag, so compare the pointer's travel and only treat a
+  // near-stationary press as a click.
+  const pressedAt = useRef<{ x: number; y: number } | null>(null);
 
   return (
     <div
@@ -323,6 +336,23 @@ function SortableTaskCard({
       style={{ transform: CSS.Translate.toString(transform), transition }}
       {...attributes}
       {...listeners}
+      onPointerDown={(event) => {
+        pressedAt.current = { x: event.clientX, y: event.clientY };
+        listeners?.onPointerDown?.(event);
+      }}
+      onClick={(event) => {
+        const start = pressedAt.current;
+        pressedAt.current = null;
+        if (!start) return;
+        const travelled = Math.hypot(
+          event.clientX - start.x,
+          event.clientY - start.y,
+        );
+        if (travelled > 4) return;
+        router.push(`/projects/${projectId}?task=${task.id}`, {
+          scroll: false,
+        });
+      }}
       className={cn(isDragging && "opacity-40")}
     >
       <TaskCard task={task} projectKey={projectKey} done={done} />

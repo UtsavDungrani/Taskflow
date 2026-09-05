@@ -319,6 +319,48 @@ export async function updateTask(input: {
   return updated;
 }
 
+export async function addComment(input: {
+  taskId: string;
+  userId: string;
+  body: string;
+}) {
+  await assertTaskAccess(input.taskId, input.userId);
+
+  return prisma.comment.create({
+    data: {
+      taskId: input.taskId,
+      authorId: input.userId,
+      body: input.body,
+    },
+  });
+}
+
+/**
+ * Status change from the detail panel, where there is no drop target to
+ * derive an ordering from. Delegates to moveTask so the completedAt and
+ * activity-log rules live in exactly one place — the card lands at the
+ * bottom of its new column.
+ */
+export async function setTaskStatus(input: {
+  taskId: string;
+  userId: string;
+  statusId: string;
+}) {
+  const last = await prisma.task.findFirst({
+    where: { statusId: input.statusId, archivedAt: null },
+    orderBy: { position: "desc" },
+    select: { id: true },
+  });
+
+  return moveTask({
+    taskId: input.taskId,
+    userId: input.userId,
+    statusId: input.statusId,
+    beforeId: last?.id ?? null,
+    afterId: null,
+  });
+}
+
 export async function archiveTask(taskId: string, userId: string) {
   await assertTaskAccess(taskId, userId);
   return prisma.task.update({

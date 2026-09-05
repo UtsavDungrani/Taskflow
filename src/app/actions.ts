@@ -5,9 +5,11 @@ import { z } from "zod";
 
 import { requireUser } from "@/lib/auth";
 import {
+  addComment,
   archiveTask,
   createTask,
   moveTask,
+  setTaskStatus,
   updateTask,
 } from "@/server/tasks";
 import { createProject, getWorkspaceForUser } from "@/server/workspace";
@@ -89,6 +91,39 @@ export async function updateTaskAction(input: unknown) {
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/");
+  return { ok: true };
+}
+
+const addCommentSchema = z.object({
+  taskId: z.string().min(1),
+  projectId: z.string().min(1),
+  body: z.string().trim().min(1, "Comment cannot be empty").max(20000),
+});
+
+export async function addCommentAction(input: unknown) {
+  const user = await requireUser();
+  const parsed = addCommentSchema.parse(input);
+
+  await addComment({ ...parsed, userId: user.id });
+
+  revalidatePath(`/projects/${parsed.projectId}`);
+  return { ok: true };
+}
+
+const setStatusSchema = z.object({
+  taskId: z.string().min(1),
+  projectId: z.string().min(1),
+  statusId: z.string().min(1),
+});
+
+export async function setTaskStatusAction(input: unknown) {
+  const user = await requireUser();
+  const parsed = setStatusSchema.parse(input);
+
+  await setTaskStatus({ ...parsed, userId: user.id });
+
+  revalidatePath(`/projects/${parsed.projectId}`);
   revalidatePath("/");
   return { ok: true };
 }
