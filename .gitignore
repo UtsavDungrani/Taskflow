@@ -50,3 +50,6 @@ next-env.d.ts
 /.claude/skills/
 /.cursor/
 /skills-lock.json
+
+# Local data dumps from db:export.
+*taskflow-backup*.json

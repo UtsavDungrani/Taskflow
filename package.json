@@ -11,7 +11,9 @@
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "node --experimental-strip-types prisma/seed.ts"
+    "db:seed": "node --experimental-strip-types prisma/seed.ts",
+    "db:export": "node --experimental-strip-types prisma/export.ts",
+    "db:restore": "node --experimental-strip-types prisma/restore.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

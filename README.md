@@ -28,8 +28,16 @@ comes next and why the schema is already shaped for it.
 
 ### 1. Create a database
 
-Any Postgres works. [Neon](https://neon.tech) has a free tier and needs no
-local install — create a project and copy the **pooled** connection string.
+Any Postgres works. Both [Supabase](https://supabase.com) and
+[Neon](https://neon.tech) have free tiers needing no local install.
+
+**Choose the region nearest you — it cannot be changed later, and it matters
+more than anything else for how the app feels.** See
+[Performance](#performance-put-the-database-near-you) for measurements. From
+India, Supabase's `ap-south-1` (Mumbai) is the closest option; Neon has no
+Indian region.
+
+On Supabase, copy the **Session pooler** connection string (port `5432`).
 
 ### 2. Configure the environment
 
@@ -84,6 +92,8 @@ once you have it working.
 | `npm run db:push`    | Push schema without a migration (prototyping)|
 | `npm run db:studio`  | Prisma Studio, a GUI over the data          |
 | `npm run db:seed`    | Insert the demo project                     |
+| `npm run db:export`  | Dump every table to JSON                    |
+| `npm run db:restore` | Replay a dump into the current database     |
 
 ## Architecture notes
 
@@ -123,32 +133,54 @@ prisma/
 ## Performance: put the database near you
 
 The single biggest factor in how this app feels is the physical distance to
-your Postgres. Measured against a Neon instance in `us-east-2` from India:
+your Postgres — not the choice of database engine, and not the ORM.
 
-| | Time |
-| --- | --- |
-| One round trip (`SELECT 1`, warm) | ~265 ms |
-| Board load, warm | ~1.3 s (5 sequential queries) |
-| Board load, cold | ~4 s (Neon wakes a suspended compute) |
+Measured from India, first against Neon in `us-east-2` (Ohio), then against
+Supabase in `ap-south-1` (Mumbai):
 
-Server-side execution is close to zero — almost all of that is network.
-Prisma splits each nested `include` into its own query and runs them in
-sequence, so latency multiplies by the number of relations you load.
+| | Ohio | Mumbai |
+| --- | --- | --- |
+| One round trip (`SELECT 1`, warm) | 265 ms | **20 ms** |
+| Connection setup (TCP + TLS) | ~4 s | **165 ms** |
+| Board load | ~1300 ms | **~376 ms** |
+| Board + open a ticket | ~3800 ms | **~360 ms** |
 
-**Pick a Neon region close to you when you create the project.** From India
-that is `ap-south-1` (Mumbai) or `ap-southeast-1` (Singapore), which takes a
-round trip to roughly 30 ms and the board load to a couple of hundred
-milliseconds. Region cannot be changed after creation — you make a new
-project, repoint `DATABASE_URL`, and re-run `db:migrate` and `db:seed`.
+Server-side execution was close to zero in both cases — essentially all of
+that time was network. Prisma splits each nested `include` into its own
+query and runs them in sequence, so latency multiplies by the number of
+relations you load.
 
-Also note the free tier **auto-suspends** after a few minutes idle, so the
-first request after a break pays several seconds to wake the compute. That
-is a plan limit, not a bug; paid tiers let you extend or disable it.
+Two conclusions worth keeping:
 
-The code side has already been tightened: access checks ride in the `where`
-clause instead of a preceding query, the board and the open ticket are
-fetched with `Promise.all`, and the app shell gets its workspace and project
-list in one query. What remains is geography.
+**Swapping Postgres for another engine would have changed nothing.** The
+database was never the bottleneck; the packet's flight time was. MySQL or
+MongoDB in Ohio would have measured the same.
+
+**Region is chosen at creation and cannot be changed.** Neon has no Indian
+region (closest is Singapore); Supabase has Mumbai. Whichever host you use,
+pick the region nearest your users before anything else.
+
+If you need to move providers, `npm run db:export` dumps every table to JSON
+and `npm run db:restore <file>` replays it in foreign-key-safe order.
+
+The code side is already tightened: access checks ride in the `where` clause
+instead of a preceding query, the board and the open ticket are fetched with
+`Promise.all`, and the app shell gets its workspace and project list in one
+query. If you ever need more, collapsing the board read into a single SQL
+statement with JSON aggregation measured 5x faster than Prisma's five
+queries — at the cost of hand-written mapping and no type safety.
+
+### Connecting Prisma to Supabase
+
+Use the **Session pooler** string (port `5432`), not "Direct connection" —
+direct is IPv6-only on the free plan and will not connect from most home
+ISPs. Avoid the *transaction* pooler on `6543`; it does not support the
+prepared statements Prisma uses.
+
+If your database password contains `@`, `%`, `#` or `/`, percent-encode it
+(`@` becomes `%40`), or the URL parser will split the string in the wrong
+place. And delete the square brackets around `[YOUR-PASSWORD]` — they are a
+placeholder, not part of the format.
 
 ## Known issues
 
