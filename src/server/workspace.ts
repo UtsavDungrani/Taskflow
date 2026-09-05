@@ -58,6 +58,37 @@ export async function ensureWorkspace(userId: string) {
   });
 }
 
+/**
+ * Everything the app shell needs, in one query: the workspace plus the
+ * project list for the sidebar. Fetching them separately cost two sequential
+ * round trips on every single page view.
+ *
+ * Only a brand-new account falls through to ensureWorkspace, so the extra
+ * write happens once per user rather than once per request.
+ */
+export async function getShell(userId: string) {
+  const member = await prisma.workspaceMember.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    include: {
+      workspace: {
+        include: {
+          projects: {
+            where: { archivedAt: null },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, name: true, key: true, color: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (member) return member.workspace;
+
+  const workspace = await ensureWorkspace(userId);
+  return { ...workspace, projects: [] };
+}
+
 /** Resolves the workspace, asserting the user is a member of it. */
 export async function getWorkspaceForUser(userId: string, workspaceId?: string) {
   const member = await prisma.workspaceMember.findFirst({

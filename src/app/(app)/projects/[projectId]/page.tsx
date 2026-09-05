@@ -16,14 +16,16 @@ export default async function ProjectBoardPage({
   const { task: openTaskId } = await searchParams;
   const user = await requireUser();
 
-  const project = await getBoard(projectId, user.id).catch(() => null);
-  if (!project) notFound();
-
   // The open task lives in the URL rather than component state, so a ticket
-  // is linkable and the back button closes the panel.
-  const openTask = openTaskId
-    ? await getTask(openTaskId, user.id).catch(() => null)
-    : null;
+  // is linkable and the back button closes the panel. Fetched alongside the
+  // board rather than after it: they are independent, and against a distant
+  // database serialising them doubles the wait to open a card.
+  const [project, openTask] = await Promise.all([
+    getBoard(projectId, user.id),
+    openTaskId ? getTask(openTaskId, user.id) : null,
+  ]);
+
+  if (!project) notFound();
 
   return (
     <div className="flex h-full flex-col">

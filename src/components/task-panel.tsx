@@ -130,7 +130,7 @@ export function TaskPanel({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex justify-end bg-black/30"
+      className="fixed inset-0 z-40 flex items-start justify-center bg-black/40 p-4 pt-[7vh]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
@@ -139,9 +139,9 @@ export function TaskPanel({
         role="dialog"
         aria-modal="true"
         aria-label={`${taskRef(projectKey, task.number)} ${task.title}`}
-        className="bg-surface border-border scroll-slim flex h-full w-full max-w-lg flex-col overflow-y-auto border-l shadow-[var(--shadow-pop)]"
+        className="bg-surface-raised border-border scroll-slim flex max-h-[85vh] w-full max-w-2xl flex-col overflow-y-auto rounded-xl border shadow-[var(--shadow-pop)]"
       >
-        <header className="border-border bg-surface sticky top-0 z-10 flex items-center gap-2 border-b px-5 py-3">
+        <header className="border-border bg-surface-raised sticky top-0 z-10 flex items-center gap-2 border-b px-5 py-3">
           <span className="text-ink-subtle font-mono text-xs">
             {taskRef(projectKey, task.number)}
           </span>

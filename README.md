@@ -120,6 +120,36 @@ prisma/
   seed.ts           demo data
 ```
 
+## Performance: put the database near you
+
+The single biggest factor in how this app feels is the physical distance to
+your Postgres. Measured against a Neon instance in `us-east-2` from India:
+
+| | Time |
+| --- | --- |
+| One round trip (`SELECT 1`, warm) | ~265 ms |
+| Board load, warm | ~1.3 s (5 sequential queries) |
+| Board load, cold | ~4 s (Neon wakes a suspended compute) |
+
+Server-side execution is close to zero — almost all of that is network.
+Prisma splits each nested `include` into its own query and runs them in
+sequence, so latency multiplies by the number of relations you load.
+
+**Pick a Neon region close to you when you create the project.** From India
+that is `ap-south-1` (Mumbai) or `ap-southeast-1` (Singapore), which takes a
+round trip to roughly 30 ms and the board load to a couple of hundred
+milliseconds. Region cannot be changed after creation — you make a new
+project, repoint `DATABASE_URL`, and re-run `db:migrate` and `db:seed`.
+
+Also note the free tier **auto-suspends** after a few minutes idle, so the
+first request after a break pays several seconds to wake the compute. That
+is a plan limit, not a bug; paid tiers let you extend or disable it.
+
+The code side has already been tightened: access checks ride in the `where`
+clause instead of a preceding query, the board and the open ticket are
+fetched with `Promise.all`, and the app shell gets its workspace and project
+list in one query. What remains is geography.
+
 ## Known issues
 
 `npm audit` reports vulnerabilities in `mysql2`, pulled in transitively by the

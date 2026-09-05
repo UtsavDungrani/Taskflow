@@ -33,10 +33,14 @@ async function assertProjectAccess(projectId: string, userId: string) {
 // ---------------------------------------------------------------------------
 
 export async function getBoard(projectId: string, userId: string) {
-  await assertProjectAccess(projectId, userId);
-
-  return prisma.project.findUnique({
-    where: { id: projectId },
+  // The membership check rides along in the where clause rather than running
+  // as its own query. Over a distant database each avoided round trip is
+  // worth more than the readability of a separate assert.
+  return prisma.project.findFirst({
+    where: {
+      id: projectId,
+      workspace: { members: { some: { userId } } },
+    },
     include: {
       statuses: {
         orderBy: { position: "asc" },
@@ -113,10 +117,12 @@ export async function getScheduledTasks(projectId: string, userId: string) {
 }
 
 export async function getTask(taskId: string, userId: string) {
-  await assertTaskAccess(taskId, userId);
-
-  return prisma.task.findUnique({
-    where: { id: taskId },
+  // Access check folded into the where clause; see getBoard.
+  return prisma.task.findFirst({
+    where: {
+      id: taskId,
+      project: { workspace: { members: { some: { userId } } } },
+    },
     include: {
       status: true,
       project: { select: { id: true, key: true, name: true } },
