@@ -37,6 +37,10 @@ The schema already carries `startDate`, `dueDate`, `estimateHours` and a
       Durations are whole minutes rather than fractional hours, because
       summing floats for time drifts. Input accepts `2h`, `90m`, `1h 30m`,
       `1:30` or a bare `1.5`.
+
+      Entries can be edited in place or deleted. An edit moves the task's
+      total by the difference between old and new minutes, never to the new
+      value, so it stays correct alongside every other entry.
 - [ ] **Assignee picker** — the field exists on `Task` and the avatar already
       renders on cards, but nothing sets it while the app is single-user.
 - [x] **Gantt chart** — bars from `startDate` to `dueDate`, day/week/month

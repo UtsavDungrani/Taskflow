@@ -1,7 +1,7 @@
 "use client";
 
 import { format, formatDistanceToNow } from "date-fns";
-import { Archive, Check, Trash2, X } from "lucide-react";
+import { Archive, Check, Pencil, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
@@ -14,6 +14,7 @@ import {
   logTimeAction,
   setTaskStatusAction,
   updateTaskAction,
+  updateTimeEntryAction,
 } from "@/app/actions";
 import { formatDuration, parseDuration } from "@/lib/duration";
 import type { Priority } from "@/generated/prisma/enums";
@@ -359,6 +360,11 @@ export function TaskPanel({
             onDeleteEntry={(entryId) =>
               run(() => deleteTimeEntryAction(entryId, projectId))
             }
+            onUpdateEntry={(entryId, patch) =>
+              run(() =>
+                updateTimeEntryAction({ entryId, projectId, ...patch }),
+              )
+            }
           />
 
           <section>
@@ -473,6 +479,7 @@ function TimeSection({
   onSaveEstimate,
   onLog,
   onDeleteEntry,
+  onUpdateEntry,
 }: {
   task: PanelTask;
   projectId: string;
@@ -488,6 +495,10 @@ function TimeSection({
   onSaveEstimate: (minutes: number | null) => void;
   onLog: (minutes: number) => void;
   onDeleteEntry: (entryId: string) => void;
+  onUpdateEntry: (
+    entryId: string,
+    patch: { minutes: number; note?: string; spentOn: string },
+  ) => void;
 }) {
   const [amountError, setAmountError] = useState<string | null>(null);
 
@@ -653,34 +664,154 @@ function TimeSection({
       {task.timeEntries.length > 0 && (
         <ul className="divide-border border-border mt-3 divide-y rounded-lg border">
           {task.timeEntries.map((entry) => (
-            <li
+            <TimeEntryRow
               key={entry.id}
-              className="flex items-baseline gap-2 px-3 py-1.5 text-xs"
-            >
-              <span className="text-ink w-16 shrink-0 font-medium tabular-nums">
-                {formatDuration(entry.minutes)}
-              </span>
-              <span className="text-ink-subtle w-20 shrink-0">
-                {format(new Date(entry.spentOn), "d MMM")}
-              </span>
-              <span className="text-ink-muted min-w-0 flex-1 truncate">
-                {entry.note ?? ""}
-              </span>
-              <button
-                type="button"
-                onClick={() => onDeleteEntry(entry.id)}
-                disabled={pending}
-                className="text-ink-subtle hover:text-danger shrink-0 transition disabled:opacity-40"
-                aria-label={`Delete ${formatDuration(entry.minutes)} entry`}
-                title="Delete entry"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </li>
+              entry={entry}
+              pending={pending}
+              onDelete={() => onDeleteEntry(entry.id)}
+              onSave={(patch) => onUpdateEntry(entry.id, patch)}
+            />
           ))}
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * A logged entry, editable in place. Edit state is local to the row so
+ * opening one does not disturb any other, and cancelling restores the
+ * server's values rather than whatever was half-typed.
+ */
+function TimeEntryRow({
+  entry,
+  pending,
+  onDelete,
+  onSave,
+}: {
+  entry: PanelTask["timeEntries"][number];
+  pending: boolean;
+  onDelete: () => void;
+  onSave: (patch: {
+    minutes: number;
+    note?: string;
+    spentOn: string;
+  }) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [amount, setAmount] = useState(formatDuration(entry.minutes));
+  const [note, setNote] = useState(entry.note ?? "");
+  const [day, setDay] = useState(toDateInput(entry.spentOn));
+  const [amountError, setAmountError] = useState<string | null>(null);
+
+  function beginEdit() {
+    setAmount(formatDuration(entry.minutes));
+    setNote(entry.note ?? "");
+    setDay(toDateInput(entry.spentOn));
+    setAmountError(null);
+    setEditing(true);
+  }
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const minutes = parseDuration(amount);
+    if (minutes === null) {
+      setAmountError("Try 2h, 45m, 1h 30m or 1:30.");
+      return;
+    }
+    onSave({ minutes, note: note.trim() || undefined, spentOn: day });
+    setEditing(false);
+  }
+
+  if (!editing) {
+    return (
+      <li className="group flex items-baseline gap-2 px-3 py-1.5 text-xs">
+        <span className="text-ink w-16 shrink-0 font-medium tabular-nums">
+          {formatDuration(entry.minutes)}
+        </span>
+        <span className="text-ink-subtle w-20 shrink-0">
+          {format(new Date(entry.spentOn), "d MMM")}
+        </span>
+        <span className="text-ink-muted min-w-0 flex-1 truncate">
+          {entry.note ?? ""}
+        </span>
+        {/* Revealed on hovering the row, not the button itself. */}
+        <span className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+          <button
+            type="button"
+            onClick={beginEdit}
+            disabled={pending}
+            className="text-ink-subtle hover:text-ink transition disabled:opacity-40"
+            aria-label={`Edit ${formatDuration(entry.minutes)} entry`}
+            title="Edit entry"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={pending}
+            className="text-ink-subtle hover:text-danger transition disabled:opacity-40"
+            aria-label={`Delete ${formatDuration(entry.minutes)} entry`}
+            title="Delete entry"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </span>
+      </li>
+    );
+  }
+
+  return (
+    <li className="bg-surface-sunken px-3 py-2">
+      <form onSubmit={submit}>
+        {/* Same two-row shape as the log form, for the same reason: a native
+            date input will not shrink, so it gets its own track. */}
+        <div className="grid grid-cols-[minmax(0,6rem)_minmax(0,1fr)_auto_auto] gap-2">
+          <input
+            value={amount}
+            onChange={(event) => {
+              setAmount(event.target.value);
+              if (amountError) setAmountError(null);
+            }}
+            aria-label="Amount of time"
+            className={`${inputClass} text-xs`}
+            autoFocus
+          />
+          <input
+            type="date"
+            value={day}
+            onChange={(event) => setDay(event.target.value)}
+            aria-label="Day the work happened"
+            className={`${inputClass} min-w-0 text-xs`}
+          />
+          <button
+            type="submit"
+            disabled={pending}
+            className="bg-accent text-accent-ink shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition hover:opacity-90 disabled:opacity-40"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="text-ink-muted hover:bg-surface shrink-0 rounded-lg px-2 py-2 text-xs transition"
+          >
+            Cancel
+          </button>
+        </div>
+        <input
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="What did you do? (optional)"
+          aria-label="Note"
+          className={`${inputClass} mt-2 text-xs`}
+        />
+        {amountError && (
+          <p className="text-danger mt-1 text-xs">{amountError}</p>
+        )}
+      </form>
+    </li>
   );
 }
 

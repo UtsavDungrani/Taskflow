@@ -426,6 +426,50 @@ export async function logTime(input: {
   });
 }
 
+/**
+ * Edits a logged entry. The denormalised total on the task moves by the
+ * difference between the old and new minutes — not to the new value — so it
+ * stays correct alongside every other entry on the task.
+ */
+export async function updateTimeEntry(input: {
+  entryId: string;
+  userId: string;
+  minutes: number;
+  note?: string | null;
+  spentOn: Date;
+}) {
+  // Scoped through the task, so an id from another workspace is not found
+  // rather than editable.
+  const existing = await prisma.timeEntry.findFirst({
+    where: {
+      id: input.entryId,
+      task: { project: { workspace: { members: { some: { userId: input.userId } } } } },
+    },
+  });
+  if (!existing) throw new Error("NOT_FOUND");
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.timeEntry.update({
+      where: { id: input.entryId },
+      data: {
+        minutes: input.minutes,
+        note: input.note ?? null,
+        spentOn: input.spentOn,
+      },
+    });
+
+    const delta = updated.minutes - existing.minutes;
+    if (delta !== 0) {
+      await tx.task.update({
+        where: { id: existing.taskId },
+        data: { spentMinutes: { increment: delta } },
+      });
+    }
+
+    return { taskId: existing.taskId };
+  });
+}
+
 export async function deleteTimeEntry(entryId: string, userId: string) {
   // Scope the lookup through the task, so an id from another workspace is
   // simply not found rather than deletable.

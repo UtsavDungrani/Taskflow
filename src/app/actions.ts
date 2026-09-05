@@ -11,6 +11,7 @@ import {
   deleteTimeEntry,
   logTime,
   moveTask,
+  updateTimeEntry,
   setTaskStatus,
   updateTask,
 } from "@/server/tasks";
@@ -154,6 +155,32 @@ export async function logTimeAction(input: unknown) {
     note: parsed.note,
     // Midday UTC so the DATE column lands on the intended day regardless of
     // which side of the date line the server sits.
+    spentOn: new Date(`${parsed.spentOn}T12:00:00Z`),
+  });
+
+  revalidatePath(`/projects/${parsed.projectId}`);
+  return { ok: true };
+}
+
+const updateTimeEntrySchema = z.object({
+  entryId: z.string().min(1),
+  projectId: z.string().min(1),
+  minutes: z.coerce.number().int().min(1).max(1440),
+  note: z.string().trim().max(500).optional(),
+  spentOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD"),
+});
+
+export async function updateTimeEntryAction(input: unknown) {
+  const user = await requireUser();
+  const parsed = updateTimeEntrySchema.parse(input);
+
+  await updateTimeEntry({
+    entryId: parsed.entryId,
+    userId: user.id,
+    minutes: parsed.minutes,
+    note: parsed.note,
+    // Midday UTC, matching logTimeAction: keeps the DATE column on the
+    // intended day whatever timezone the server is in.
     spentOn: new Date(`${parsed.spentOn}T12:00:00Z`),
   });
 
