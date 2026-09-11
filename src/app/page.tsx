@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import Header from "@/components/Header";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { auth } from "@/lib/auth";
 
@@ -31,107 +32,38 @@ export default async function HomePage() {
     <div className="bg-canvas text-ink flex min-h-screen flex-col selection:bg-accent-soft selection:text-accent">
 
       {/* Main Navigation */}
-      <header className="border-border/80 bg-surface/80 sticky top-0 z-30 border-b backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="bg-accent text-accent-ink shadow-sm flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold transition group-hover:scale-105">
-              TF
-            </div>
-            <div>
-              <span className="font-display text-ink text-lg font-bold tracking-tight">
-                TaskFlow
-              </span>
-            </div>
-          </Link>
-
-          <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
-            <Link
-              href="#features"
-              className="text-ink-muted hover:text-ink transition"
-            >
-              Features
-            </Link>
-            <Link
-              href="#preview"
-              className="text-ink-muted hover:text-ink transition"
-            >
-              Live Views
-            </Link>
-            <Link
-              href="#philosophy"
-              className="text-ink-muted hover:text-ink transition"
-            >
-              Design Philosophy
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block">
-              <ThemeToggle />
-            </div>
-
-            {user ? (
-              <div className="flex items-center gap-3">
-                <span className="text-ink-muted hidden text-xs font-medium lg:inline">
-                  Signed in as <strong className="text-ink">{user.name ?? user.email}</strong>
-                </span>
-                <Link
-                  href="/deadlines"
-                  className="bg-accent text-accent-ink hover:opacity-90 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-sm transition"
-                >
-                  <span>Open Workspace</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/login"
-                  className="text-ink hover:bg-surface-sunken rounded-lg px-3 py-1.5 text-xs font-medium transition"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/signup"
-                  className="bg-ink text-canvas hover:opacity-90 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-sm transition"
-                >
-                  <span>Get Started</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <Header user={user} />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden px-6 pt-16 pb-20 md:pt-24 md:pb-28">
-        {/* Subtle decorative background gradient */}
-        <div className="bg-accent/5 pointer-events-none absolute -top-24 left-1/2 h-96 w-[40rem] -translate-x-1/2 rounded-full blur-3xl" />
+      <section className="relative px-4 sm:px-6 pt-10 pb-6 md:pt-16 md:pb-12">
+        {/* Decorative gradient — clipped separately so it never hides content */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="bg-accent/5 absolute -top-24 left-1/2 h-96 w-[40rem] -translate-x-1/2 rounded-full blur-3xl" />
+        </div>
 
         <div className="relative mx-auto max-w-4xl text-center">
-          <div className="border-border bg-surface text-ink-muted shadow-sm mb-6 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium">
-            <Sparkles className="text-accent h-3.5 w-3.5" />
-            <span>Warm paper aesthetic · Focused on shipping on time</span>
+          <div className="border-border bg-surface text-ink-muted shadow-sm mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium">
+            <Sparkles className="text-accent h-3.5 w-3.5 shrink-0" />
+            <span className="leading-snug">Warm paper aesthetic · Focused on shipping on time</span>
           </div>
 
-          <h1 className="font-display text-ink text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl leading-[1.12]">
+          <h1 className="font-display text-ink text-3xl font-bold tracking-tight sm:text-5xl md:text-6xl leading-[1.12]">
             Projects, tickets &amp; deadlines that{" "}
             <span className="text-accent italic">refuse</span> to be forgotten.
           </h1>
 
-          <p className="text-ink-muted mx-auto mt-6 max-w-2xl text-base leading-relaxed sm:text-lg">
+          <p className="text-ink-muted mx-auto mt-5 max-w-2xl text-sm leading-relaxed sm:text-base sm:mt-6">
             The thing that stops you missing a deadline is not another cluttered board.
             It is a <strong>single screen</strong> that tells you what is already
             late and what is about to be. The Kanban, Gantt, and Calendar views
             are all synchronized renderings of the same data.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
             {user ? (
               <Link
                 href="/deadlines"
-                className="bg-accent text-accent-ink hover:opacity-90 flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold shadow-md transition"
+                className="bg-accent text-accent-ink hover:opacity-90 flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold shadow-md transition sm:w-auto"
               >
                 <span>Go to Your Workspace</span>
                 <ArrowRight className="h-4 w-4" />
@@ -140,14 +72,14 @@ export default async function HomePage() {
               <>
                 <Link
                   href="/signup"
-                  className="bg-accent text-accent-ink hover:opacity-90 flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold shadow-md transition"
+                  className="bg-accent text-accent-ink hover:opacity-90 flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold shadow-md transition sm:w-auto"
                 >
                   <span>Start Tracking Free</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/login"
-                  className="bg-surface border-border text-ink hover:bg-surface-sunken flex items-center gap-2 rounded-xl border px-6 py-3.5 text-sm font-medium shadow-sm transition"
+                  className="bg-surface border-border text-ink hover:bg-surface-sunken flex w-full items-center justify-center gap-2 rounded-xl border px-6 py-3.5 text-sm font-medium shadow-sm transition sm:w-auto"
                 >
                   <span>Sign In</span>
                 </Link>
@@ -155,7 +87,7 @@ export default async function HomePage() {
             )}
           </div>
 
-          <div className="text-ink-subtle mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs">
+          <div className="text-ink-subtle mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="text-success h-4 w-4" /> Free forever for personal projects
             </span>
@@ -170,7 +102,7 @@ export default async function HomePage() {
       </section>
 
       {/* Interactive Board / Workspace Preview */}
-      <section id="preview" className="px-6 py-12 md:py-16">
+      <section id="preview" className="px-4 sm:px-6 py-8 md:py-10">
         <div className="mx-auto max-w-5xl">
           <div className="mb-4 flex items-center justify-between">
             <div>
