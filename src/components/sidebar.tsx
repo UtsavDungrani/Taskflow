@@ -35,21 +35,23 @@ export function Sidebar({
     <>
       <aside className="bg-surface border-border flex w-60 shrink-0 flex-col border-r">
         <div className="border-border flex items-center gap-2 border-b px-4 py-3">
-          <div className="bg-accent text-accent-ink flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold">
-            TF
-          </div>
-          <div className="min-w-0">
-            <p className="font-display text-ink truncate text-base font-semibold">
-              TaskFlow
-            </p>
-            <p className="text-ink-subtle truncate text-xs">{workspaceName}</p>
-          </div>
+          <Link href="/" className="flex items-center gap-2 hover:opacity-85 transition">
+            <div className="bg-accent text-accent-ink flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold">
+              TF
+            </div>
+            <div className="min-w-0">
+              <p className="font-display text-ink truncate text-base font-semibold">
+                TaskFlow
+              </p>
+              <p className="text-ink-subtle truncate text-xs">{workspaceName}</p>
+            </div>
+          </Link>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 py-3">
           <NavLink
-            href="/"
-            active={pathname === "/"}
+            href="/deadlines"
+            active={pathname === "/deadlines"}
             icon={<CalendarClock className="h-4 w-4" />}
           >
             Deadlines

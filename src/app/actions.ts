@@ -259,7 +259,7 @@ export async function loginAction(
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/",
+      redirectTo: "/deadlines",
     });
     return {};
   } catch (err: unknown) {
@@ -315,7 +315,7 @@ export async function registerAndLoginAction(
     await signIn("credentials", {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirectTo: "/",
+      redirectTo: "/deadlines",
     });
     return {};
   } catch (err: unknown) {

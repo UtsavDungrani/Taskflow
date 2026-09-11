@@ -40,7 +40,8 @@ export default async function RootLayout({
    * handles via prefers-color-scheme.
    */
   const stored = (await cookies()).get(THEME_COOKIE)?.value;
-  const theme = stored === "light" || stored === "dark" ? stored : undefined;
+  // Default to light theme; only switch to dark if explicitly chosen by user
+  const theme = stored === "dark" ? "dark" : stored === "system" ? undefined : "light";
 
   return (
     <html

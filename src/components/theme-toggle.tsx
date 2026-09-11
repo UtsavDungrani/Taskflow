@@ -74,7 +74,7 @@ export function ThemeToggle() {
           aria-pressed={theme === value}
           title={label}
           className={cn(
-            "flex flex-1 items-center justify-center rounded-md py-1 transition",
+            "flex flex-1 items-center justify-center rounded-md px-2.5 py-1 transition",
             theme === value
               ? "bg-surface text-ink shadow-[var(--shadow-card)]"
               : "text-ink-subtle hover:text-ink",
