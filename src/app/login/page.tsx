@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { LoginForm } from "@/components/auth/login-form";
 import { auth, devLoginEnabled, gitHubEnabled, signIn } from "@/lib/auth";
 
 export const metadata = { title: "Sign in · TaskFlow" };
@@ -7,8 +8,6 @@ export const metadata = { title: "Sign in · TaskFlow" };
 export default async function LoginPage() {
   const session = await auth();
   if (session?.user) redirect("/");
-
-  const nothingConfigured = !gitHubEnabled && !devLoginEnabled;
 
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-16">
@@ -25,7 +24,17 @@ export default async function LoginPage() {
           </p>
         </div>
 
-        <div className="bg-surface border-border space-y-3 rounded-xl border p-5 shadow-[var(--shadow-card)]">
+        <div className="bg-surface border-border space-y-4 rounded-xl border p-5 shadow-[var(--shadow-card)]">
+          <LoginForm />
+
+          {(gitHubEnabled || devLoginEnabled) && (
+            <div className="flex items-center gap-3 pt-1">
+              <span className="bg-border h-px flex-1" />
+              <span className="text-ink-subtle text-xs">or</span>
+              <span className="bg-border h-px flex-1" />
+            </div>
+          )}
+
           {gitHubEnabled && (
             <form
               action={async () => {
@@ -49,14 +58,6 @@ export default async function LoginPage() {
             </form>
           )}
 
-          {gitHubEnabled && devLoginEnabled && (
-            <div className="flex items-center gap-3">
-              <span className="bg-border h-px flex-1" />
-              <span className="text-ink-subtle text-xs">or</span>
-              <span className="bg-border h-px flex-1" />
-            </div>
-          )}
-
           {devLoginEnabled && (
             <form
               action={async () => {
@@ -74,19 +75,6 @@ export default async function LoginPage() {
                 Development only. Disabled when NODE_ENV is production.
               </p>
             </form>
-          )}
-
-          {nothingConfigured && (
-            <div className="text-sm">
-              <p className="text-ink font-medium">No sign-in method configured</p>
-              <p className="text-ink-muted mt-2">
-                Set <code className="font-mono text-xs">ALLOW_DEV_LOGIN</code> and{" "}
-                <code className="font-mono text-xs">DEV_LOGIN_EMAIL</code> in{" "}
-                <code className="font-mono text-xs">.env</code>, or add GitHub
-                OAuth credentials. See{" "}
-                <code className="font-mono text-xs">.env.example</code>.
-              </p>
-            </div>
           )}
         </div>
       </div>

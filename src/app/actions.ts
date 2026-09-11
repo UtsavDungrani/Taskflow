@@ -236,3 +236,96 @@ export async function createProjectAction(input: unknown) {
   revalidatePath("/");
   return { id: project.id };
 }
+
+const registerSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100),
+  email: z.string().trim().email("Invalid email address").max(255),
+  password: z.string().min(6, "Password must be at least 6 characters").max(100),
+});
+
+export async function loginAction(
+  _prevState: { error?: string } | null,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const email = formData.get("email")?.toString() ?? "";
+  const password = formData.get("password")?.toString() ?? "";
+
+  if (!email.trim() || !password) {
+    return { error: "Please enter your email and password." };
+  }
+
+  try {
+    const { signIn } = await import("@/lib/auth");
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/",
+    });
+    return {};
+  } catch (err: unknown) {
+    const error = err as { message?: string; digest?: string };
+    if (
+      error?.message === "NEXT_REDIRECT" ||
+      (typeof error?.digest === "string" && error.digest.startsWith("NEXT_REDIRECT"))
+    ) {
+      throw err;
+    }
+    return { error: "Invalid email or password." };
+  }
+}
+
+export async function registerAndLoginAction(
+  _prevState: { error?: string } | null,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const name = formData.get("name")?.toString() ?? "";
+  const email = formData.get("email")?.toString() ?? "";
+  const password = formData.get("password")?.toString() ?? "";
+  const confirmPassword = formData.get("confirmPassword")?.toString() ?? "";
+
+  if (!name.trim()) return { error: "Name is required." };
+  if (!email.trim() || !email.includes("@")) return { error: "A valid email is required." };
+  if (password.length < 6) return { error: "Password must be at least 6 characters long." };
+  if (password !== confirmPassword) return { error: "Passwords do not match." };
+
+  const parsed = registerSchema.safeParse({ name, email, password });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  try {
+    const { hash } = await import("bcryptjs");
+    const passwordHash = await hash(parsed.data.password, 10);
+    const { registerUser } = await import("@/server/auth");
+    await registerUser({
+      name: parsed.data.name,
+      email: parsed.data.email,
+      passwordHash,
+    });
+  } catch (err: unknown) {
+    const error = err as { message?: string };
+    if (error?.message === "EMAIL_ALREADY_EXISTS") {
+      return { error: "An account with this email already exists." };
+    }
+    return { error: "Failed to create account. Please try again." };
+  }
+
+  try {
+    const { signIn } = await import("@/lib/auth");
+    await signIn("credentials", {
+      email: parsed.data.email,
+      password: parsed.data.password,
+      redirectTo: "/",
+    });
+    return {};
+  } catch (err: unknown) {
+    const error = err as { message?: string; digest?: string };
+    if (
+      error?.message === "NEXT_REDIRECT" ||
+      (typeof error?.digest === "string" && error.digest.startsWith("NEXT_REDIRECT"))
+    ) {
+      throw err;
+    }
+    return { error: "Account created! Please sign in on the login page." };
+  }
+}

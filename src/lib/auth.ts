@@ -4,6 +4,8 @@ import GitHub from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
+import { compare } from "bcryptjs";
+
 import { prisma } from "./prisma";
 
 const gitHubId = process.env.AUTH_GITHUB_ID;
@@ -21,7 +23,34 @@ export const devLoginEnabled =
   process.env.NODE_ENV !== "production" &&
   process.env.ALLOW_DEV_LOGIN === "true";
 
-const providers: NextAuthConfig["providers"] = [];
+const providers: NextAuthConfig["providers"] = [
+  Credentials({
+    id: "credentials",
+    name: "Email and Password",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) return null;
+      const email = String(credentials.email).toLowerCase().trim();
+      const password = String(credentials.password);
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user || !user.password) {
+        return null;
+      }
+
+      const isValid = await compare(password, user.password);
+      if (!isValid) return null;
+
+      return { id: user.id, email: user.email, name: user.name };
+    },
+  }),
+];
 
 if (gitHubEnabled) {
   providers.push(
